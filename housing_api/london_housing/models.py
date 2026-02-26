@@ -32,6 +32,10 @@ class Housing(models.Model):
     bathrooms = models.IntegerField()
     receptions = models.IntegerField()
 
+    #default false for for sale/rent
+    for_sale = models.BooleanField(default=False)
+    for_rent = models.BooleanField(default=False)
+
     def __str__(self):
         return f'{self.address} in {self.area.name}'
 
@@ -53,3 +57,30 @@ class Rating(models.Model):
 
     def __str__(self):
         return f'{self.housing.address} rated: {self.score}/10 by {self.user.username}'
+    
+#allows users to own a house/list it for rent or sale
+class Porfolio(models.Model):
+    #list of possible statuses
+    STATUSES = [
+        ('LIVING', 'Living at this address'),
+        ('SELLING', 'Trying to sell'),
+        ('RENTING', 'Trying to rent out')
+    ]
+
+    #link a user to a house
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='portfolio_items')
+    housing = models.ForeignKey(Housing, on_delete=models.CASCADE, related_name='portfolio_entries')
+
+    #status of the property/potential rest cost + when was added to the users portfolio
+    status = models.CharField(max_length=20, choices=STATUSES, default='LIVING')
+    rent_pcm = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    added_on = models.DateTimeField(auto_now_add=True)
+
+    #should only allow one user to one house
+    class Meta:
+        unique_together = ('user', 'housing')
+
+    def __str__(self):
+        return f'{self.user.username} - {self.housing.address} ({self.get_status_display()})'
+
+
