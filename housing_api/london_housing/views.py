@@ -5,7 +5,7 @@ from .models import Housing, Area
 
 #user accounts
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 
 # Create your views here.
 
@@ -131,3 +131,53 @@ def register_user(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
         
+#login route
+@csrf_exempt
+def login_user(request):
+    if request.method == 'POST':
+        try:
+            #get the login details
+            body = json.loads(request.body)
+            username = body.get('username', '').strip()
+            password = body.get('password', '').strip()
+
+            #authenticate the user by checking the database with the username and hashed password
+            user = authenticate(username=username, password=password)
+
+            #ensures user exists
+            if user is not None:
+                login(request, user)
+                return JsonResponse({"message": f"{user.username} is logged in"}, status=200)
+            
+            #if not need a 401 unauthorised user
+            else:
+                return JsonResponse({"error": "Invalid Username or Password"}, status=401)
+            
+        #if theres a server error/unkown method
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+#logout route
+@csrf_exempt
+def logout_user(request):
+    if request.method == 'POST':
+        try:
+            #security needs to check login in - otherwise unauthorised
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    "error": "Unauthorized. You must be logged in to log out."
+                }, status=401)
+
+            #then allow logout
+            logout(request)
+            return JsonResponse({"message": "Successfully"}, status=200)
+            
+        #if theres a server error/unkown method
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    #need to use the correct method 405 = incorrect method
+    else:
+        return JsonResponse({"error": "Method not allowed - use POST"}, status=405)
+        
+    
