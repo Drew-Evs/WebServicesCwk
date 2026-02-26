@@ -32,6 +32,9 @@ class Housing(models.Model):
     bathrooms = models.IntegerField()
     receptions = models.IntegerField()
 
+    #average rating from users
+    average_rating = models.FloatField(null=True, blank=True)
+
     #default false for for sale/rent
     for_sale = models.BooleanField(default=False)
     for_rent = models.BooleanField(default=False)

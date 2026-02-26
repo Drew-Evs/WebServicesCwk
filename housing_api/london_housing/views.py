@@ -3,6 +3,10 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Housing, Area
 
+#user accounts
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login
+
 # Create your views here.
 
 #allows testing POST
@@ -101,5 +105,29 @@ def housing_list(request):
             return JsonResponse({"error": str(e)}, status=400)
 
 
+#register route
+@csrf_exempt
+def register_user(request):
+    if request.method == 'POST':
+        #get the account details entered and push to database
+        try:
+            body = json.loads(request.body)
+            username = body.get('username', '').strip()
+            password = body.get('password', '').strip()
+            email = body.get('email', '').strip()
 
+            #need to ensure that username and password are not empty and dont already exist
+            if not username or not password:
+                return JsonResponse({"error": "Username and Password are required"}, status=400)
+            #409 shows a conflict
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({"error": "This Username is already taken"}, status=409)
+            
+            user = User.objects.create_user(username=username, email=email, password=password)
 
+            return JsonResponse({"message": f"Account created for {user.username}"}, status=201)
+        
+        #if theres a server error/unkown method
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
