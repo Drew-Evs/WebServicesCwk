@@ -1,7 +1,8 @@
 import json
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Housing, Area
+from django.db.models import Avg
+from .models import Housing, Area, Rating
 
 #user accounts
 from django.contrib.auth.models import User
@@ -181,3 +182,63 @@ def logout_user(request):
         return JsonResponse({"error": "Method not allowed - use POST"}, status=405)
         
     
+@csrf_exempt
+def rate_house(request):
+    #post for creating a new rating
+    if request.method == 'POST':
+        #test user logged in
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User must be logged in to rate"}, status=401)
+        
+        #get the info - body may be blank
+        try:
+            body = json.loads(request.body)
+            house_id = body.get('house_id')
+            score = body.get('score')
+            comments = body.get('comments', '')
+
+            #validate that the required fields are there and that score is between 1 and 10
+            if not house_id or not score:
+                return JsonResponse({"error": "'house_id' and 'score' are required."}, status=400)
+            if not (1 <= int(score) <= 10):
+                return JsonResponse({"error": "Score must be between 1 and 10."}, status=400)
+            
+            #handle missing house error (404 - not found)
+            try:
+                house = Housing.objects.get(housing_id=house_id)
+            except Housing.DoesNotExist:
+                return JsonResponse({"error": f"House with this ID doesn't exist"}, status = 404)
+            
+            #create/update rating - if already exists (must be unique)
+            rating, created = Rating.objects.update_or_create(
+                user=request.user,
+                housing=house,
+                defaults={'score': score, 'comments': comments}
+            )
+
+            #update the average score for the house
+            house_avg = Rating.objects.filter(housing=house).aggregate(Avg('score'))['score__avg']
+            house.average_rating = house_avg
+            house.save()
+
+            #and fo rthe area
+            area = house.area
+            area_avg = Rating.objects.filter(housing__area=area).aggregate(Avg('score'))['score__avg']
+            area.average_rating = area_avg
+            area.save()
+
+            #return if successful
+            return JsonResponse({
+                "message": "Rating submitted successfully!",
+                "house_address": house.address,
+                "new_house_average": round(house_avg, 2),
+                "new_area_average": round(area_avg, 2)
+            }, status=200)
+
+        #server error
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    #incorrect method
+    else:
+        return JsonResponse({"error": "Method not allowed. Use POST."}, status=405)
