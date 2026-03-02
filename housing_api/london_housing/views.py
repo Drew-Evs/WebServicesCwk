@@ -239,9 +239,48 @@ def rate_house(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
         
+    #the delete method to get rid of a rating they have made
+    elif request.method == 'DELETE':
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "User must be logged in to delete a rating"}, status=401)
+        
+        try:
+            body = json.loads(request.body)
+            address = body.get('address', '').strip()
+
+            #if the address doesnt exist return error
+            if not address:
+                return JsonResponse({"error": "Need to enter 'address' to delete"}, status=400)
+            
+            #get the house and check the user owns it
+            try:
+                rating = Rating.objects.get(user=request.user, housing=house)
+                rating.delete()
+            except Rating.DoesNotExist:
+                return JsonResponse({"error": "You have not rated this house"}, status=404)
+
+            #recalculate averages and set to 0 if no items left
+            house_avg = Rating.objects.filter(housing=house).aggregate(Avg('score'))['score__avg']
+            house.average_rating = house_avg if house_avg is not None else 0
+            house.save()
+
+            area = house.area
+            area_avg = Rating.objects.filter(housing__area=area).aggregate(Avg('score'))['score__avg']
+            area.average_rating = area_avg if area_avg is not None else 0
+            area.save()
+
+            return JsonResponse({
+                "message": "Rating deleted successfully.",
+                "new_house_average": round(house.average_rating, 2),
+                "new_area_average": round(area.average_rating, 2)
+            }, status=200)
+            
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
     #incorrect method
     else:
-        return JsonResponse({"error": "Method not allowed. Use POST."}, status=405)
+        return JsonResponse({"error": "Method not allowed. Use POST/DELTETE."}, status=405)
     
 
 #method to allow user portfolio
@@ -281,11 +320,11 @@ def user_portfolio(request):
             #attempt to connect to a house in the database
             body = json.loads(request.body)
             create_filter = str(body.get('create'))
+            address = body.get('address', '').strip()
 
             #decide if needs to create or link 
             if create_filter == 'True':
                 #needs addresss and area name
-                address = body.get('address', '').strip()
                 area = body.get('area_name', '').strip()
 
                 if not address or not area:
@@ -307,8 +346,6 @@ def user_portfolio(request):
                 )
 
             elif create_filter == 'False':
-                address = body.get('address', '').strip()
-
                 #test if house exists - error 404 if not
                 try:
                     house = Housing.objects.get(address=address)
@@ -349,3 +386,79 @@ def user_portfolio(request):
         
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+                  
+    #the PUT method to update
+    elif request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+            address = body.get('address', '').strip()
+
+            #if the address doesnt exist return error
+            if not address:
+                return JsonResponse({"error": "Need to enter 'address' to update"}, status=400)
+            
+            #get the house and check the user owns it
+            try:
+                house = Housing.objects.get(address=address)
+            except Housing.DoesNotExist:
+                return JsonResponse({"error": "House not found"}, status=404)
+            #using status 403 for forbidden (does not own)
+            try:
+                portfolio_entry = Portfolio.objects.get(user=request.user, housing=house)
+            except Portfolio.DoesNotExist:
+                return JsonResponse({"error": "Forbidden: do not own property"}, status=403)
+            
+            #update property if data given - if not default to old value
+            house.property_type = body.get('property_type', house.property_type)
+            house.price = body.get('price', house.price)
+            house.bedrooms = body.get('bedrooms', house.bedrooms)
+            house.bathrooms = body.get('bathrooms', house.bathrooms)
+            house.receptions = body.get('receptions', house.receptions)
+            house.for_sale = body.get('for_sale', house.for_sale)
+            house.for_rent = body.get('for_rent', house.for_rent)
+            house.save()
+
+            #update portfolio in same way
+            portfolio_entry.status = body.get('status', portfolio_entry.status)
+            portfolio_entry.rent_pcm = body.get('rent_pcm', portfolio_entry.rent_pcm)
+            portfolio_entry.save()
+
+            return JsonResponse({"message": "Property updated successfully"}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    #the delete method to get rid of a house they own
+    elif request.method == 'DELETE':
+        try:
+            body = json.loads(request.body)
+            address = body.get('address', '').strip()
+
+            #if the address doesnt exist return error
+            if not address:
+                return JsonResponse({"error": "Need to enter 'address' to delete"}, status=400)
+            
+            #get the house and check the user owns it
+            try:
+                house = Housing.objects.get(address=address)
+            except Housing.DoesNotExist:
+                return JsonResponse({"error": "House not found"}, status=404)
+            #using status 403 for forbidden (does not own)
+            try:
+                portfolio_entry = Portfolio.objects.get(user=request.user, housing=house)
+            except Portfolio.DoesNotExist:
+                return JsonResponse({"error": "Forbidden: do not own property"}, status=403)
+            
+            #then delete - will cascade to delete portfolio
+            house.delete()
+
+            return JsonResponse({"message": f"Property {address} deleted successfully"}, status=200)
+            
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    #if not need to return an error
+    else:
+        return JsonResponse({"error": "Need to use PUT, DELETE, POST or GET"}, status=405)
+            
+            
