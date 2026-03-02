@@ -2,7 +2,7 @@ import json
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Avg
-from .models import Housing, Area, Rating
+from .models import Housing, Area, Rating, Portfolio
 
 #user accounts
 from django.contrib.auth.models import User
@@ -242,3 +242,110 @@ def rate_house(request):
     #incorrect method
     else:
         return JsonResponse({"error": "Method not allowed. Use POST."}, status=405)
+    
+
+#method to allow user portfolio
+@csrf_exempt
+def user_portfolio(request):
+    #need to be logged in to view/add to porfolio - if not error 401
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorised - login first"}, status=401)
+    
+    #GET - view portfolio
+    if request.method == 'GET':
+        try:
+            #fetch portfolio items from user
+            portfolio_items = Portfolio.objects.filter(user=request.user)
+
+            data = []
+            for item in portfolio_items:
+                data.append({
+                    "portfolio_id": item.id,
+                    "house_id": item.housing.housing_id,
+                    "address": item.housing.address,
+                    "area": item.housing.area.name,
+                    "status": item.get_status_display(),
+                    "rent_pcm": float(item.rent_pcm) if item.rent_pcm else None,
+                    "added_on": item.added_on.strftime("%Y-%m-%d %H:%M")
+                })
+
+            return JsonResponse({"my_porfolio": data, "total_properties": portfolio_items.count()}, status=200)
+
+        #except server error - code 500
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    #else want to add house to the porfolio
+    elif request.method == 'POST':
+        try:
+            #attempt to connect to a house in the database
+            body = json.loads(request.body)
+            create_filter = str(body.get('create'))
+
+            #decide if needs to create or link 
+            if create_filter == 'True':
+                #needs addresss and area name
+                address = body.get('address', '').strip()
+                area = body.get('area_name', '').strip()
+
+                if not address or not area:
+                    return JsonResponse({"error": "Needs either an 'address' and 'area_name"}, status=400)
+                
+                area_obj, _ = Area.objects.get_or_create(name=area)
+
+                #create new house
+                house = Housing.objects.create(
+                    area=area_obj,
+                    address=address,
+                    property_type=body.get('property_type', 'Unknown'),
+                    price=body.get('price', 0),
+                    bedrooms=body.get('bedrooms', 0),
+                    bathrooms=body.get('bathrooms', 0),
+                    receptions=body.get('receptions', 0),
+                    for_sale=body.get('for_sale', False),
+                    for_rent=body.get('for_rent', False)
+                )
+
+            elif create_filter == 'False':
+                address = body.get('address', '').strip()
+
+                #test if house exists - error 404 if not
+                try:
+                    house = Housing.objects.get(address=address)
+                except Housing.DoesNotExist:
+                    return JsonResponse({"error": f"House with address: {address} not found"}, status=404)
+
+                #check for conflict - house already registered to other users portfolio (conflict = 409)
+                if Portfolio.objects.filter(housing=house).exclude(user=request.user).exists():
+                    return JsonResponse({"error": "Conflict as house is already registered to another user"}, status=409)
+
+            #else invalid needs create_filter
+            else:
+                return JsonResponse({"error": "Requires 'create_filter'"}, status=400)
+
+            #then link to the portfolio table
+            status = body.get('status', 'LIVING')
+            rent_pcm = body.get('rent_pcm', None)
+
+            #update or create stops a user creating the same house twice
+            portfolio_entry, created = Portfolio.objects.update_or_create(
+                user=request.user,
+                housing=house,
+                defaults={
+                    'status': status,
+                    'rent_pcm': rent_pcm
+                }
+            )
+
+            msg = "House added to portfolio" if created else "Portfolio entry updated"
+
+            #return success message
+            return JsonResponse({
+                "message": msg,
+                "portfolio_id": portfolio_entry.id,
+                "house_address": house.address,
+                "status": portfolio_entry.get_status_display()
+            }, status=202 if create_filter == 'True' else 200)
+        
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)

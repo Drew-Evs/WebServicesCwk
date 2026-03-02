@@ -62,7 +62,7 @@ class Rating(models.Model):
         return f'{self.housing.address} rated: {self.score}/10 by {self.user.username}'
     
 #allows users to own a house/list it for rent or sale
-class Porfolio(models.Model):
+class Portfolio(models.Model):
     #list of possible statuses
     STATUSES = [
         ('LIVING', 'Living at this address'),
