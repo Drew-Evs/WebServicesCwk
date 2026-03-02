@@ -30,8 +30,7 @@ class Housing(models.Model):
     area_sqft = models.IntegerField(null=True, blank=True)
     bedrooms = models.IntegerField()
     bathrooms = models.IntegerField()
-    receptions = models.IntegerField()
-
+    
     #average rating from users
     average_rating = models.FloatField(null=True, blank=True)
 

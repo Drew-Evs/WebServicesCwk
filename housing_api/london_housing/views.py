@@ -90,6 +90,7 @@ def housing_list(request):
                 "property_type": house.property_type,
                 "price": float(house.price),
                 "bedrooms": house.bedrooms,
+                "bathrooms": house.bathrooms,
                 "area_name": house.area.name
             })
 
@@ -134,7 +135,6 @@ def housing_list(request):
                 area_sqft=body.get('area_sqft'),
                 bedrooms=body.get('bedrooms', 0),
                 bathrooms=body.get('bathrooms', 0),
-                receptions=body.get('receptions', 0),
                 for_sale=body.get('for_sale', False),
                 for_rent=body.get('for_rent', False)
             )
@@ -277,7 +277,7 @@ def rate_house(request):
                 "house_address": house.address,
                 "new_house_average": round(house_avg, 2),
                 "new_area_average": round(area_avg, 2)
-            }, status=200)
+            }, status=201)
 
         #server error
         except Exception as e:
@@ -295,6 +295,12 @@ def rate_house(request):
             #if the address doesnt exist return error
             if not address:
                 return JsonResponse({"error": "Need to enter 'address' to delete"}, status=400)
+
+            #handle missing house error (404 - not found)
+            try:
+                house = Housing.objects.get(address=address)
+            except Housing.DoesNotExist:
+                return JsonResponse({"error": f"House with this address doesn't exist"}, status = 404)
             
             #get the house and check the user owns it
             try:
@@ -384,7 +390,6 @@ def user_portfolio(request):
                     price=body.get('price', 0),
                     bedrooms=body.get('bedrooms', 0),
                     bathrooms=body.get('bathrooms', 0),
-                    receptions=body.get('receptions', 0),
                     for_sale=body.get('for_sale', False),
                     for_rent=body.get('for_rent', False)
                 )
@@ -426,7 +431,7 @@ def user_portfolio(request):
                 "portfolio_id": portfolio_entry.id,
                 "house_address": house.address,
                 "status": portfolio_entry.get_status_display()
-            }, status=202 if create_filter == 'True' else 200)
+            }, status=201 if create_filter == 'True' else 200)
         
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
@@ -457,7 +462,6 @@ def user_portfolio(request):
             house.price = body.get('price', house.price)
             house.bedrooms = body.get('bedrooms', house.bedrooms)
             house.bathrooms = body.get('bathrooms', house.bathrooms)
-            house.receptions = body.get('receptions', house.receptions)
             house.for_sale = body.get('for_sale', house.for_sale)
             house.for_rent = body.get('for_rent', house.for_rent)
             house.save()
