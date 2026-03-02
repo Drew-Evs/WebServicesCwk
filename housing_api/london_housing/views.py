@@ -8,10 +8,35 @@ from .models import Housing, Area, Rating, Portfolio
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 
-# Create your views here.
+#imports to allow rate limitiing
+#rate limiting stops oto many records loading at once - prevents crashings
+import time
+from django.core.cache import cache
+from django.core.paginator import Paginator, EmptyPage
+
+#decorator to limit rates - only a certain amount of requests in the time window
+def rate_limit(max_requests=60, window=60):
+    def decorator(func):
+        def wrapper(request, *args, **kwargs):
+            #get IP address of the user - use to cache number of requests
+            ip = request.META.get('REMOTE_ADDR')
+            cache_key = f"rate_limit_{ip}"
+
+            #check number of requests (ensure less than max) - error coede (429)
+            requests_made = cache.get(cache_key, 0)
+            if requests_made >= max_requests:
+                return JsonResponse({"error": "Too many requests made - exceeded API limit"}, status=429)
+            
+            #increment num of requestws and timeout
+            cache.set(cache_key, requests_made+1, timeout=window)
+            return func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 #allows testing POST
 @csrf_exempt
+#rate limit the housing - 30 requests a minute
+@rate_limit(max_requests=30, window=60)
 def housing_list(request):
     #if GET need to read all of the housing listing
     if request.method == 'GET':
@@ -43,11 +68,22 @@ def housing_list(request):
         if prop_type:
             houses = houses.filter(property_type__icontains=prop_type)
 
+        #include pagination logic - limits to only 20 houses per page
+        page_number = request.GET.get('page', 1)
+        per_page = request.GET.get('limit', 20)
+        paginator = Paginator(houses, per_page)
+
+        #try to get correct page - if still values to get
+        try:
+            page_obj = paginator.page(page_number)
+        except EmptyPage:
+            return JsonResponse({"error": "Page not found - run out of houses"}, status=404)
+
         #map database to a dictionary
         data = []
 
         #loop through each house + add to dictionary
-        for house in houses:
+        for house in page_obj:
             data.append({
                 "id": house.housing_id,
                 "address": house.address,
@@ -62,7 +98,15 @@ def housing_list(request):
             return JsonResponse({"Output": "No houses match", "houses": []}, status=200)
 
         #return as a Json Response
-        return JsonResponse({"number of houses": houses.count(), "houses": data}, safe=False, status=200)
+        return JsonResponse({
+            "meta": {
+                "total_results": paginator.count,
+                "total_pages": paginator.num_pages,
+                "current_page": page_obj.number,
+                "has_next_page": page_obj.has_next(),
+                "has_previous_page": page_obj.has_previous()
+            }, "houses":data
+            }, safe=False, status=200)
 
     #post for creating a new house
     elif request.method == 'POST':
