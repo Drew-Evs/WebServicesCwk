@@ -193,19 +193,19 @@ def rate_house(request):
         #get the info - body may be blank
         try:
             body = json.loads(request.body)
-            house_id = body.get('house_id')
+            address = body.get('address')
             score = body.get('score')
             comments = body.get('comments', '')
 
             #validate that the required fields are there and that score is between 1 and 10
-            if not house_id or not score:
-                return JsonResponse({"error": "'house_id' and 'score' are required."}, status=400)
+            if not address or not score:
+                return JsonResponse({"error": "'address' and 'score' are required."}, status=400)
             if not (1 <= int(score) <= 10):
                 return JsonResponse({"error": "Score must be between 1 and 10."}, status=400)
             
             #handle missing house error (404 - not found)
             try:
-                house = Housing.objects.get(housing_id=house_id)
+                house = Housing.objects.get(address=address)
             except Housing.DoesNotExist:
                 return JsonResponse({"error": f"House with this ID doesn't exist"}, status = 404)
             

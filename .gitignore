@@ -5,6 +5,5 @@ __pycache__/
 *.pyd
 
 # Django Database ignore sqlite database after changes
-db.sqlite3
+# db.sqlite3
 db.sqlite3-journal
-#add this in after initial commit
