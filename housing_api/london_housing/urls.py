@@ -13,4 +13,7 @@ urlpatterns = [
 
     #portfolio endpoint
     path('portfolio/', views.user_portfolio, name='user_portfolio'),
+
+    #area endpoint
+    path('areas/', views.area_list, name='area_list'),
 ]

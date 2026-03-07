@@ -1,7 +1,7 @@
 import json
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from .models import Housing, Area, Rating, Portfolio
 
 #user accounts
@@ -509,4 +509,54 @@ def user_portfolio(request):
     else:
         return JsonResponse({"error": "Need to use PUT, DELETE, POST or GET"}, status=405)
             
-            
+
+#want to be able to search by area and filter by price/rating
+@csrf_exempt
+def area_list(request):
+    if request.method == 'GET':
+        try:
+            #usoing annotate to get average price 
+            areas = Area.objects.annotate(
+                calculated_avg_price = Avg('properties__price'),
+                total_houses = Count('properties')
+            )
+
+            #URL filters
+            min_rating = request.GET.get('min_rating')
+            max_price = request.GET.get('max_price')
+            min_price = request.GET.get('min_price')
+
+            #and apply filters
+            if min_rating:
+                areas = areas.filter(average_rating__gte=min_rating)
+            if max_price:
+                areas = areas.filter(average_price__lte=max_price)
+            if min_price:
+                areas = areas.filter(average_price__gte=min_price)
+
+            #map to dictionary - fall back to 0 if no rating/prices
+            data = []
+            for area in areas:
+                #calculate live average price and add to db 
+                live_avg_price = round(area.calculated_avg_price, 2) if area.calculated_avg_price else 0.0
+                area.average_price = live_avg_price
+                area.save()
+
+                data.append({
+                    "area_name": area.name,
+                    "average_rating": round(area.average_rating, 2) if area.average_rating else 0.0,
+                    "average_house_price": live_avg_price,
+                    "total_listed_properties": area.total_houses
+                })
+
+            #then sort alphabatelically and respond
+            data = sorted(data, key=lambda x: x['area_name'])
+
+            return JsonResponse({
+                "total_areas_found": areas.count(),
+                "areas": data
+            }, status=200)
+        
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
