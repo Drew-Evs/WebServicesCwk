@@ -1,0 +1,205 @@
+--- STARTING DATABASE POPULATION ---
+Clearing old data...
+Created 5 Areas.
+
+--- CREATING 30 USERS ---
+User: user_1 | Pass: password123
+User: user_2 | Pass: password123
+User: user_3 | Pass: password123
+User: user_4 | Pass: password123
+User: user_5 | Pass: password123
+User: user_6 | Pass: password123
+User: user_7 | Pass: password123
+User: user_8 | Pass: password123
+User: user_9 | Pass: password123
+User: user_10 | Pass: password123
+User: user_11 | Pass: password123
+User: user_12 | Pass: password123
+User: user_13 | Pass: password123
+User: user_14 | Pass: password123
+User: user_15 | Pass: password123
+User: user_16 | Pass: password123
+User: user_17 | Pass: password123
+User: user_18 | Pass: password123
+User: user_19 | Pass: password123
+User: user_20 | Pass: password123
+User: user_21 | Pass: password123
+User: user_22 | Pass: password123
+User: user_23 | Pass: password123
+User: user_24 | Pass: password123
+User: user_25 | Pass: password123
+User: user_26 | Pass: password123
+User: user_27 | Pass: password123
+User: user_28 | Pass: password123
+User: user_29 | Pass: password123
+User: user_30 | Pass: password123
+
+--- CREATING HOUSING & ASSIGNING PORTFOLIOS ---
+House: 1 High St (Hackney) - £650210 | Market: Sale=False, Rent=True | Owner: user_10
+House: 2 Station Rd (Chelsea) - £1192976 | Market: Sale=False, Rent=False | Owner: user_23
+House: 3 Church Ln (Camden) - £806925 | Market: Sale=True, Rent=False | Owner: user_9
+House: 4 High St (Greenwich) - £1377030 | Market: Sale=True, Rent=False | Owner: user_7
+House: 5 Church Ln (Hackney) - £546751 | Market: Sale=True, Rent=False | Owner: user_2
+House: 6 Park Ave (Camden) - £222358 | Market: Sale=False, Rent=True | Owner: user_18
+House: 7 Park Ave (Camden) - £1028708 | Market: Sale=False, Rent=True | Owner: user_23
+House: 8 Church Ln (Hackney) - £332529 | Market: Sale=False, Rent=False | Owner: user_18
+House: 9 Station Rd (Greenwich) - £1094904 | Market: Sale=False, Rent=True | Owner: user_4
+House: 10 Station Rd (Chelsea) - £1411585 | Market: Sale=True, Rent=False | Owner: user_1
+House: 11 Church Ln (Chelsea) - £1309425 | Market: Sale=True, Rent=False | Owner: user_22
+House: 12 High St (Hackney) - £1227807 | Market: Sale=False, Rent=True | Owner: user_21
+House: 13 High St (Hackney) - £1409719 | Market: Sale=False, Rent=True | Owner: user_21
+House: 14 Park Ave (Islington) - £1496700 | Market: Sale=True, Rent=False | Owner: user_7
+House: 15 Park Ave (Chelsea) - £1466437 | Market: Sale=True, Rent=False | Owner: user_1
+House: 16 High St (Hackney) - £606477 | Market: Sale=True, Rent=False | Owner: user_19
+House: 17 Park Ave (Chelsea) - £1322089 | Market: Sale=True, Rent=False | Owner: user_14
+House: 18 High St (Islington) - £444350 | Market: Sale=True, Rent=False | Owner: user_7
+House: 19 Church Ln (Chelsea) - £408060 | Market: Sale=False, Rent=False | Owner: user_15
+House: 20 Park Ave (Greenwich) - £641081 | Market: Sale=False, Rent=False | Owner: user_16
+House: 21 Park Ave (Greenwich) - £476070 | Market: Sale=True, Rent=False | Owner: user_24
+House: 22 High St (Islington) - £1129702 | Market: Sale=True, Rent=False | Owner: user_18
+House: 23 High St (Camden) - £751763 | Market: Sale=False, Rent=True | Owner: user_20
+House: 24 Station Rd (Camden) - £209263 | Market: Sale=False, Rent=True | Owner: user_5
+House: 25 High St (Camden) - £1138312 | Market: Sale=False, Rent=False | Owner: user_18
+House: 26 Park Ave (Greenwich) - £269553 | Market: Sale=True, Rent=False | Owner: user_12
+House: 27 High St (Camden) - £1241407 | Market: Sale=True, Rent=False | Owner: user_10
+House: 28 Church Ln (Islington) - £265450 | Market: Sale=False, Rent=False | Owner: user_14
+House: 29 Park Ave (Hackney) - £1400970 | Market: Sale=False, Rent=False | Owner: user_13
+House: 30 Park Ave (Hackney) - £636956 | Market: Sale=False, Rent=True | Owner: user_24
+House: 31 Park Ave (Islington) - £1172123 | Market: Sale=False, Rent=True | Owner: user_23
+House: 32 Park Ave (Greenwich) - £703110 | Market: Sale=True, Rent=False | Owner: user_13
+House: 33 Station Rd (Hackney) - £1021618 | Market: Sale=False, Rent=True | Owner: user_19
+House: 34 Station Rd (Islington) - £586912 | Market: Sale=False, Rent=True | Owner: user_6
+House: 35 Park Ave (Camden) - £954322 | Market: Sale=False, Rent=False | Owner: user_19
+House: 36 Station Rd (Hackney) - £860589 | Market: Sale=False, Rent=True | Owner: user_4
+House: 37 High St (Greenwich) - £1084858 | Market: Sale=True, Rent=False | Owner: user_28
+House: 38 Park Ave (Islington) - £387978 | Market: Sale=False, Rent=False | Owner: user_17
+House: 39 Park Ave (Chelsea) - £291266 | Market: Sale=False, Rent=False | Owner: user_29
+House: 40 Park Ave (Camden) - £993385 | Market: Sale=False, Rent=False | Owner: user_11
+House: 41 Church Ln (Camden) - £995710 | Market: Sale=False, Rent=False | Owner: user_3
+House: 42 Station Rd (Greenwich) - £877837 | Market: Sale=True, Rent=False | Owner: user_18
+House: 43 Station Rd (Chelsea) - £806672 | Market: Sale=False, Rent=False | Owner: user_16
+House: 44 Church Ln (Camden) - £560709 | Market: Sale=True, Rent=False | Owner: user_25
+House: 45 Church Ln (Islington) - £517373 | Market: Sale=True, Rent=False | Owner: user_18
+House: 46 Church Ln (Islington) - £507651 | Market: Sale=True, Rent=False | Owner: user_22
+House: 47 Park Ave (Greenwich) - £1260075 | Market: Sale=False, Rent=True | Owner: user_3
+House: 48 Station Rd (Camden) - £1431559 | Market: Sale=True, Rent=False | Owner: user_9
+House: 49 High St (Islington) - £961640 | Market: Sale=False, Rent=True | Owner: user_10
+House: 50 Church Ln (Camden) - £1471431 | Market: Sale=True, Rent=False | Owner: user_21
+House: 51 Station Rd (Greenwich) - £1142766 | Market: Sale=True, Rent=False | Owner: user_22
+House: 52 Station Rd (Greenwich) - £1142938 | Market: Sale=False, Rent=False | Owner: user_21
+House: 53 Church Ln (Islington) - £1187976 | Market: Sale=False, Rent=True | Owner: user_26
+House: 54 High St (Greenwich) - £1494152 | Market: Sale=False, Rent=False | Owner: user_24
+House: 55 Church Ln (Greenwich) - £1185259 | Market: Sale=False, Rent=True | Owner: user_18
+House: 56 High St (Chelsea) - £923991 | Market: Sale=True, Rent=False | Owner: user_19
+House: 57 Church Ln (Camden) - £431852 | Market: Sale=True, Rent=False | Owner: user_16
+House: 58 Church Ln (Camden) - £897647 | Market: Sale=False, Rent=True | Owner: user_28
+House: 59 Church Ln (Hackney) - £1172297 | Market: Sale=True, Rent=False | Owner: user_23
+House: 60 Church Ln (Hackney) - £891071 | Market: Sale=True, Rent=False | Owner: user_6
+
+--- GENERATING RATINGS ---
+Rating: user_1 rated 20 Park Ave a 6/10
+Rating: user_1 rated 36 Station Rd a 5/10
+Rating: user_2 rated 57 Church Ln a 10/10
+Rating: user_2 rated 47 Park Ave a 10/10
+Rating: user_2 rated 10 Station Rd a 9/10
+Rating: user_3 rated 29 Park Ave a 8/10
+Rating: user_3 rated 3 Church Ln a 5/10
+Rating: user_4 rated 54 High St a 6/10
+Rating: user_4 rated 36 Station Rd a 9/10
+Rating: user_4 rated 46 Church Ln a 6/10
+Rating: user_4 rated 56 High St a 6/10
+Rating: user_5 rated 2 Station Rd a 10/10
+Rating: user_5 rated 19 Church Ln a 5/10
+Rating: user_6 rated 31 Park Ave a 8/10
+Rating: user_6 rated 17 Park Ave a 7/10
+Rating: user_7 rated 33 Station Rd a 9/10
+Rating: user_7 rated 53 Church Ln a 9/10
+Rating: user_7 rated 34 Station Rd a 6/10
+Rating: user_8 rated 23 High St a 10/10
+Rating: user_8 rated 47 Park Ave a 9/10
+Rating: user_8 rated 51 Station Rd a 6/10
+Rating: user_8 rated 44 Church Ln a 7/10
+Rating: user_9 rated 12 High St a 9/10
+Rating: user_9 rated 20 Park Ave a 7/10
+Rating: user_9 rated 38 Park Ave a 6/10
+Rating: user_9 rated 1 High St a 8/10
+Rating: user_10 rated 37 High St a 10/10
+Rating: user_10 rated 56 High St a 5/10
+Rating: user_10 rated 2 Station Rd a 5/10
+Rating: user_10 rated 57 Church Ln a 9/10
+Rating: user_11 rated 12 High St a 5/10
+Rating: user_11 rated 13 High St a 7/10
+Rating: user_11 rated 4 High St a 7/10
+Rating: user_11 rated 26 Park Ave a 8/10
+Rating: user_12 rated 23 High St a 5/10
+Rating: user_12 rated 12 High St a 8/10
+Rating: user_12 rated 4 High St a 6/10
+Rating: user_13 rated 21 Park Ave a 8/10
+Rating: user_13 rated 25 High St a 8/10
+Rating: user_13 rated 60 Church Ln a 10/10
+Rating: user_14 rated 54 High St a 6/10
+Rating: user_14 rated 36 Station Rd a 9/10
+Rating: user_14 rated 49 High St a 7/10
+Rating: user_14 rated 41 Church Ln a 8/10
+Rating: user_15 rated 22 High St a 7/10
+Rating: user_15 rated 12 High St a 8/10
+Rating: user_16 rated 19 Church Ln a 10/10
+Rating: user_16 rated 55 Church Ln a 6/10
+Rating: user_16 rated 37 High St a 5/10
+Rating: user_16 rated 20 Park Ave a 9/10
+Rating: user_17 rated 55 Church Ln a 6/10
+Rating: user_17 rated 45 Church Ln a 9/10
+Rating: user_17 rated 30 Park Ave a 9/10
+Rating: user_18 rated 32 Park Ave a 5/10
+Rating: user_18 rated 29 Park Ave a 9/10
+Rating: user_18 rated 19 Church Ln a 8/10
+Rating: user_18 rated 20 Park Ave a 10/10
+Rating: user_19 rated 39 Park Ave a 6/10
+Rating: user_19 rated 32 Park Ave a 6/10
+Rating: user_20 rated 9 Station Rd a 7/10
+Rating: user_20 rated 1 High St a 8/10
+Rating: user_20 rated 28 Church Ln a 7/10
+Rating: user_20 rated 53 Church Ln a 8/10
+Rating: user_21 rated 1 High St a 10/10
+Rating: user_21 rated 46 Church Ln a 5/10
+Rating: user_22 rated 56 High St a 8/10
+Rating: user_22 rated 45 Church Ln a 10/10
+Rating: user_22 rated 17 Park Ave a 5/10
+Rating: user_23 rated 60 Church Ln a 8/10
+Rating: user_23 rated 40 Park Ave a 10/10
+Rating: user_23 rated 14 Park Ave a 8/10
+Rating: user_23 rated 48 Station Rd a 5/10
+Rating: user_24 rated 47 Park Ave a 6/10
+Rating: user_24 rated 60 Church Ln a 7/10
+Rating: user_24 rated 24 Station Rd a 10/10
+Rating: user_24 rated 49 High St a 7/10
+Rating: user_25 rated 46 Church Ln a 6/10
+Rating: user_25 rated 28 Church Ln a 10/10
+Rating: user_26 rated 43 Station Rd a 9/10
+Rating: user_26 rated 1 High St a 8/10
+Rating: user_26 rated 41 Church Ln a 5/10
+Rating: user_26 rated 42 Station Rd a 5/10
+Rating: user_27 rated 17 Park Ave a 6/10
+Rating: user_27 rated 35 Park Ave a 6/10
+Rating: user_28 rated 32 Park Ave a 10/10
+Rating: user_28 rated 41 Church Ln a 9/10
+Rating: user_29 rated 9 Station Rd a 5/10
+Rating: user_29 rated 24 Station Rd a 10/10
+Rating: user_29 rated 57 Church Ln a 6/10
+Rating: user_30 rated 35 Park Ave a 6/10
+Rating: user_30 rated 39 Park Ave a 10/10
+Rating: user_30 rated 36 Station Rd a 9/10
+
+--- GENERATING TENANCIES ---
+Tenancy: user_13 is renting 33 Station Rd from user_19 for £1990.00/mo
+Tenancy: user_14 is renting 36 Station Rd from user_4 for £2358.00/mo
+Tenancy: user_4 is renting 55 Church Ln from user_18 for £1069.00/mo
+Tenancy: user_9 is renting 24 Station Rd from user_5 for £1527.00/mo
+Tenancy: user_20 is renting 12 High St from user_21 for £2072.00/mo
+Tenancy: user_3 is renting 53 Church Ln from user_26 for £2580.00/mo
+Tenancy: user_28 is renting 34 Station Rd from user_6 for £1405.00/mo
+Tenancy: user_11 is renting 31 Park Ave from user_23 for £1015.00/mo
+Tenancy: user_27 is renting 7 Park Ave from user_23 for £2276.00/mo
+Tenancy: user_19 is renting 49 High St from user_10 for £2285.00/mo
+
+--- POPULATION COMPLETE! ---

@@ -66,7 +66,8 @@ class Portfolio(models.Model):
     STATUSES = [
         ('LIVING', 'Living at this address'),
         ('SELLING', 'Trying to sell'),
-        ('RENTING', 'Trying to rent out')
+        ('RENTING', 'Trying to rent out'),
+        ('ACIVE_TENANT', 'Currently renting out')
     ]
 
     #link a user to a house
@@ -85,4 +86,19 @@ class Portfolio(models.Model):
     def __str__(self):
         return f'{self.user.username} - {self.housing.address} ({self.get_status_display()})'
 
+#allows users to rent a house that belongs to a different user
+class Rent(models.Model):
+    #link portfolio to tenant
+    housing = models.ForeignKey(Portfolio, on_delete=models.CASCADE, related_name='tenancy')
+    tenant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rented_properties')
 
+    #add active, start_date and actual rent per month
+    actual_rent_pcm = models.DecimalField(max_digits=10, decimal_places=2)
+    start_date = models.DateTimeField(auto_now_add=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('tenant', 'housing')
+
+    def __str__(self):
+        return f"{self.tenant.username} renting {self.housing.address} for £{self.actual_rent_pcm}/mo"
