@@ -1,18 +1,16 @@
-'''script to populate the tables rent/user/portfolio tables'''
 import os
 import django
 import random
 from decimal import Decimal
 
 # 1. SETUP DJANGO ENVIRONMENT
-# Change 'housing_api.settings' if your main project folder has a different name!
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'housing_api.settings')
 django.setup()
 
 # 2. IMPORT MODELS
+from django.db.models import Avg
 from django.contrib.auth.models import User
 from london_housing.models import Housing, Area, Rating, Portfolio, Rent
-from django.db.models import Avg, Count
 
 def populate_database():
     with open('populated_data.txt', 'w', encoding='utf-8') as log_file:
@@ -20,124 +18,134 @@ def populate_database():
             print(msg)
             log_file.write(msg + '\n')
 
-        log("--- STARTING DATABASE POPULATION ---")
+        log("--- STARTING NON-DESTRUCTIVE POPULATION ---")
 
-        log("Clearing old data...")
+        log("Clearing old test users, portfolios, and tenancies...")
         User.objects.exclude(is_superuser=True).delete()
-        Area.objects.all().delete()
         
-        # 1. CREATE AREAS
-        area_names = ["Camden", "Hackney", "Chelsea", "Islington", "Greenwich"]
-        areas = []
-        for name in area_names:
-            area, _ = Area.objects.get_or_create(name=name)
-            areas.append(area)
-        log(f"Created {len(areas)} Areas.")
+        all_houses = list(Housing.objects.all())
+        
+        if not all_houses:
+            log("ERROR: No houses found! Please run your Kaggle import script first.")
+            return
 
-        # 2. CREATE USERS
+        log(f"Successfully found {len(all_houses)} existing houses from your Kaggle import.")
+
+        # 1. CREATE USERS
         users = []
         log("\n--- CREATING 30 USERS ---")
         for i in range(1, 31):
             username = f"user_{i}"
-            email = f"{username}@test.com"
-            user = User.objects.create_user(username=username, email=email, password="password123")
+            user = User.objects.create_user(username=username, email=f"{username}@test.com", password="password123")
             users.append(user)
-            log(f"User: {username} | Pass: password123")
 
-        # 3. CREATE HOUSING & PORTFOLIOS
-        houses = []
-        property_types = ["Flat", "Detached", "Semi-Detached", "Terraced", "Mansion"]
+        # 2. ASSIGN REAL HOUSES TO PORTFOLIOS
+        log("\n--- ASSIGNING 200 RANDOM LONDON HOUSES TO USERS ---")
+        test_houses = random.sample(all_houses, min(200, len(all_houses)))
         
-        log("\n--- CREATING HOUSING & ASSIGNING PORTFOLIOS ---")
-        for i in range(1, 61):  
-            area = random.choice(areas)
-            prop_type = random.choice(property_types)
-            address = f"{i} {random.choice(['High St', 'Station Rd', 'Church Ln', 'Park Ave'])}"
-            price = random.randint(200000, 1500000)
+        # We will keep a list of portfolios that are actively looking for renters
+        rentable_portfolios = []
+
+        for house in test_houses:
+            owner = random.choice(users)
             
             for_sale = random.choice([True, False])
             for_rent = random.choice([True, False]) if not for_sale else False
-
-            house = Housing.objects.create(
-                area=area,
-                address=address,
-                property_type=prop_type,
-                price=price,
-                bedrooms=random.randint(1, 5),
-                bathrooms=random.randint(1, 3),
-                for_sale=for_sale,
-                for_rent=for_rent
-            )
-            houses.append(house)
-
-            # Assign to the Landlord's portfolio
-            owner = random.choice(users)
-            status = 'LIVING' if not for_rent else 'RENTING_OUT'
-            Portfolio.objects.create(user=owner, housing=house, status=status)
             
-            log(f"House: {address} ({area.name}) - £{price} | Market: Sale={for_sale}, Rent={for_rent} | Owner: {owner.username}")
+            house.for_sale = for_sale
+            house.for_rent = for_rent
+            house.save()
 
-        # 4. CREATE RATINGS
+            # Set initial status based on market flags
+            if for_sale:
+                status = 'SELLING'
+            elif for_rent:
+                status = 'RENTING'
+            else:
+                status = 'LIVING'
+                
+            # EVERY portfolio item gets a rent_pcm, as requested!
+            base_rent = round(Decimal(random.randint(800, 3500)), 2)
+
+            portfolio_item = Portfolio.objects.create(
+                user=owner, 
+                housing=house, 
+                status=status,
+                rent_pcm=base_rent
+            )
+            
+            if status == 'RENTING':
+                rentable_portfolios.append(portfolio_item)
+            
+        log(f"Assigned {len(test_houses)} real houses to user portfolios.")
+
+        # 3. CREATE RATINGS
         log("\n--- GENERATING RATINGS ---")
         for user in users:
-            houses_to_rate = random.sample(houses, random.randint(2, 4))
+            houses_to_rate = random.sample(test_houses, random.randint(2, 5))
             for house in houses_to_rate:
                 score = random.randint(5, 10) 
-                Rating.objects.create(user=user, housing=house, score=score, comments="Automated test rating.")
-                log(f"Rating: {user.username} rated {house.address} a {score}/10")
+                Rating.objects.create(user=user, housing=house, score=score, comments="Great Kaggle property!")
 
                 house_avg = Rating.objects.filter(housing=house).aggregate(Avg('score'))['score__avg']
                 house.average_rating = house_avg
                 house.save()
 
-        for area in areas:
-            area_avg = Rating.objects.filter(housing__area=area).aggregate(Avg('score'))['score__avg']
-            area.average_rating = area_avg if area_avg else 0
-            area.save()
-
-        # 5. CREATE TENANCIES (RENT)
+        # 4. CREATE TENANCIES (RENT)
         log("\n--- GENERATING TENANCIES ---")
-        rentable_houses = [h for h in houses if h.for_rent]
         
-        # Keep track of users who are already renting so they don't rent twice
+        # Keep track of active tenants so nobody rents more than one house
         active_tenants = set()
         
-        for house in random.sample(rentable_houses, min(10, len(rentable_houses))):
-            # Grab the Landlord's portfolio entry FIRST
-            landlord_portfolio = Portfolio.objects.get(housing=house)
-            landlord = landlord_portfolio.user
+        # Try to rent out up to 15 of the available rental portfolios
+        for portfolio in random.sample(rentable_portfolios, min(15, len(rentable_portfolios))):
+            landlord = portfolio.user
+            house = portfolio.housing
             
-            # Find eligible tenants: Must NOT be the landlord, and NOT already renting somewhere else
+            # Find a tenant who isn't the landlord, and isn't already renting elsewhere
             eligible_tenants = [u for u in users if u != landlord and u not in active_tenants]
-            
             if not eligible_tenants:
-                log("Ran out of eligible tenants!")
-                break
+                break # We ran out of free users!
                 
             tenant = random.choice(eligible_tenants)
-            active_tenants.add(tenant) # Mark them as currently renting
+            active_tenants.add(tenant) 
             
-            rent_pcm = round(Decimal(random.randint(800, 3500)), 2)
-            
-            # Link the Rent agreement to the Portfolio entry
+            # 1. Create the official Rent link (pointing at the Portfolio item)
             Rent.objects.create(
-                housing=landlord_portfolio, 
+                housing=portfolio, 
                 tenant=tenant,
-                actual_rent_pcm=rent_pcm, # Note: if your model uses rent_pcm instead of actual_rent_pcm, update this!
+                actual_rent_pcm=portfolio.rent_pcm,
                 active=True
             )
             
-            # Create a separate portfolio entry for the tenant to show they live there
-            Portfolio.objects.create(user=tenant, housing=house, status='RENTING', rent_pcm=rent_pcm)
+            # 2. Update the Landlord's portfolio to show they now have an active tenant
+            # (Using your exact spelling from models.py to prevent crashes!)
+            portfolio.status = 'ACIVE_TENANT'
+            portfolio.save()
             
-            # Take off market
+            # 3. Take the physical house off the rental market
             house.for_rent = False
             house.save()
-            log(f"Tenancy: {tenant.username} is renting {house.address} from {landlord.username} for £{rent_pcm}/mo")
+            
+            log(f"Tenancy: {tenant.username} is renting from {landlord.username} for £{portfolio.rent_pcm}/mo")
+
+        # 5. CALCULATE ALL AREA AVERAGES (PRICE & RATING)
+        log("\n--- CALCULATING GLOBAL AREA STATISTICS ---")
+        areas = Area.objects.annotate(calculated_avg_price=Avg('properties__price'))
+        
+        for area in areas:
+            area.average_price = round(area.calculated_avg_price, 2) if area.calculated_avg_price else 0.0
+            
+            area_avg_rating = Rating.objects.filter(housing__area=area).aggregate(Avg('score'))['score__avg']
+            area.average_rating = round(area_avg_rating, 2) if area_avg_rating else 0.0
+            
+            area.save()
+            
+        log(f"Successfully calculated averages for {areas.count()} Areas.")
 
         log("\n--- POPULATION COMPLETE! ---")
 
 if __name__ == '__main__':
-    print("Populating database... this might take a few seconds.")
+    print("Layering mock data over Kaggle dataset and calculating analytics...")
     populate_database()
-    print("Done! Check 'populated_data.txt' for the full output.")
+    print("Done! Check 'populated_data.txt'.")
