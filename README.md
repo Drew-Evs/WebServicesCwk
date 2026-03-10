@@ -12,4 +12,14 @@ Using London data to show cost of areas in london/allow users to login and rate 
 2. Run `pip install -r requirements.txt`
 3. Run `python manage.py runserver`
 
-[text](<API Documentation.pdf>)
+## API Documentation
+Describes the 5 endpoints:
+1. User Account
+2. Ratings
+3. Housing & Marketplace
+4. Portfolio
+5. Area
+And the GET, POST, PUT & DELETE methods for each one.
+Includes example requests, returns and expected response code.
+Also includes potential error codes.
+[API DOCS](<API Documentation.pdf>)
