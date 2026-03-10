@@ -1,0 +1,32 @@
+--- STARTING NON-DESTRUCTIVE POPULATION ---
+Clearing old test users, portfolios, and tenancies...
+Successfully found 2521 existing houses from your Kaggle import.
+
+--- CREATING 30 USERS ---
+
+--- ASSIGNING 200 RANDOM LONDON HOUSES TO USERS ---
+Assigned 200 real houses to user portfolios.
+
+--- GENERATING RATINGS ---
+
+--- GENERATING TENANCIES ---
+Tenancy: user_18 is renting from user_8 for £1577.00/mo
+Tenancy: user_24 is renting from user_14 for £1701.00/mo
+Tenancy: user_12 is renting from user_25 for £2718.00/mo
+Tenancy: user_4 is renting from user_20 for £1897.00/mo
+Tenancy: user_5 is renting from user_29 for £2797.00/mo
+Tenancy: user_10 is renting from user_25 for £2052.00/mo
+Tenancy: user_27 is renting from user_3 for £2942.00/mo
+Tenancy: user_20 is renting from user_27 for £1240.00/mo
+Tenancy: user_16 is renting from user_1 for £1424.00/mo
+Tenancy: user_9 is renting from user_5 for £1049.00/mo
+Tenancy: user_19 is renting from user_23 for £1515.00/mo
+Tenancy: user_17 is renting from user_18 for £3455.00/mo
+Tenancy: user_26 is renting from user_14 for £1391.00/mo
+Tenancy: user_23 is renting from user_21 for £1669.00/mo
+Tenancy: user_25 is renting from user_3 for £2080.00/mo
+
+--- CALCULATING GLOBAL AREA STATISTICS ---
+Successfully calculated averages for 576 Areas.
+
+--- POPULATION COMPLETE! ---

@@ -1,8 +1,8 @@
 import json
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Avg
-from .models import Housing, Area, Rating, Portfolio
+from django.db.models import Avg, Count
+from .models import Housing, Area, Rating, Portfolio, Rent
 
 #user accounts
 from django.contrib.auth.models import User
@@ -147,8 +147,10 @@ def housing_list(request):
         
         #outputs the exception if the creation fails
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return JsonResponse({"error": str(e)}, status=500)
 
+    else:
+        return JsonResponse({"error": "Method not allowed - use GET/POST"}, status=405)
 
 #register route
 @csrf_exempt
@@ -175,6 +177,65 @@ def register_user(request):
         #if theres a server error/unkown method
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Method not allowed - use POST"}, status=405)
+        
+#also need a route to update/delete user accounts
+@csrf_exempt
+def user_account(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Log in first to edit account"}, status=401)
+    
+    #put to update email/password
+    if request.method == 'PUT':
+        try:
+            body = json.loads(request.body)
+            new_email = body.get('email', '').strip()
+            new_password = body.get('password', '').strip()
+
+            #if bad request no emails/password to change
+            if not new_email and not new_password:
+                return JsonResponse({
+                    "error": "Need a new email or password to update"
+                }, status=400)
+
+            user = request.user
+
+            #test if need to update email/password
+            if new_email:
+                user.email = new_email
+            if new_password:
+                user.set_password(new_password)
+
+            user.save()
+            return JsonResponse({"message": "Account updated successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    #delete the users account
+    elif request.method == 'DELETE':
+        try:
+            user = request.user
+            username = user.username
+            user.delete()
+
+            #security check so that they have to enter their exact username to delete
+            body = json.loads(request.body)
+            confirm_username = body.get('username', '').strip()
+            
+            if confirm_username != username:
+                return JsonResponse({
+                    "error": "Forbidden. You can only delete your own account. Please confirm your exact username in the request body."
+                }, status=403)
+
+            return JsonResponse({"message": f"Account '{username}' and all data deleted"}, status=200)
+        
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    else:
+        return JsonResponse({"error": "Method not allowed - use PUT/DELETE"}, status=405)
         
 #login route
 @csrf_exempt
@@ -201,7 +262,10 @@ def login_user(request):
         #if theres a server error/unkown method
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
-        
+
+    else:
+        return JsonResponse({"error": "Method not allowed - use POST"}, status=405)
+    
 #logout route
 @csrf_exempt
 def logout_user(request):
@@ -215,7 +279,7 @@ def logout_user(request):
 
             #then allow logout
             logout(request)
-            return JsonResponse({"message": "Successfully"}, status=200)
+            return JsonResponse({"message": "Logged out successfully"}, status=200)
             
         #if theres a server error/unkown method
         except Exception as e:
@@ -228,6 +292,49 @@ def logout_user(request):
     
 @csrf_exempt
 def rate_house(request):
+    #get method to view ratings on a house/area and sort them
+    if request.method == 'GET':
+        try:
+            #get all ratings
+            ratings = Rating.objects.select_related('housing__area', 'user').all()
+
+            #get filters and either sort starting with 'high' or 'low'
+            address_filter = request.GET.get('address')
+            area_filter = request.GET.get('area')
+            sort_order = request.GET.get('sort')
+
+            #only want to filter by 1
+            if address_filter:
+                ratings = ratings.filter(housing__address__icontains=address_filter)
+            elif area_filter:
+                ratings = ratings.filter(housing__area__name__icontains=area_filter)
+
+            #sort by ratings either ascending or descending
+            if sort_order == 'low':
+                ratings = ratings.order_by('score')
+            else:
+                ratings = ratings.order_by('-score')
+            
+            #add to dictionary and return 
+            data = []
+            for r in ratings:
+                data.append({
+                    "username": r.user.username,
+                    "address": r.housing.address,
+                    "area": r.housing.area.name,
+                    "score": r.score,
+                    "comments": r.comments
+                })
+
+            return JsonResponse({
+                "total_results": ratings.count(),
+                "ratings": data
+            }, status=200)
+
+        #server error
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
     #post for creating a new rating
     if request.method == 'POST':
         #test user logged in
@@ -378,7 +485,7 @@ def user_portfolio(request):
                 area = body.get('area_name', '').strip()
 
                 if not address or not area:
-                    return JsonResponse({"error": "Needs either an 'address' and 'area_name"}, status=400)
+                    return JsonResponse({"error": "Needs an 'address' and 'area_name"}, status=400)
                 
                 area_obj, _ = Area.objects.get_or_create(name=area)
 
@@ -446,6 +553,13 @@ def user_portfolio(request):
             if not address:
                 return JsonResponse({"error": "Need to enter 'address' to update"}, status=400)
             
+            #check if provided fields to update
+            update_fields = ['property_type', 'price', 'bedrooms', 'bathrooms', 'for_sale', 'for_rent', 'status', 'rent_pcm']
+            if not any(field in body for field in update_fields):
+                return JsonResponse({
+                    "error": "No update data provided. Please specify at least one property field to change."
+                }, status=400)
+            
             #get the house and check the user owns it
             try:
                 house = Housing.objects.get(address=address)
@@ -509,4 +623,257 @@ def user_portfolio(request):
     else:
         return JsonResponse({"error": "Need to use PUT, DELETE, POST or GET"}, status=405)
             
+
+#want to be able to search by area and filter by price/rating
+@csrf_exempt
+def area_list(request):
+    if request.method == 'GET':
+        try:
+            #usoing annotate to get average price 
+            areas = Area.objects.annotate(
+                calculated_avg_price = Avg('properties__price'),
+                total_houses = Count('properties')
+            )
+
+            #URL filters
+            min_rating = request.GET.get('min_rating')
+            max_price = request.GET.get('max_price')
+            min_price = request.GET.get('min_price')
+
+            #and apply filters
+            if min_rating:
+                areas = areas.filter(average_rating__gte=min_rating)
+            if max_price:
+                areas = areas.filter(average_price__lte=max_price)
+            if min_price:
+                areas = areas.filter(average_price__gte=min_price)
+
+            #map to dictionary - fall back to 0 if no rating/prices
+            data = []
+            for area in areas:
+                #calculate live average price and add to db 
+                live_avg_price = round(area.calculated_avg_price, 2) if area.calculated_avg_price else 0.0
+                area.average_price = live_avg_price
+                area.save()
+
+                data.append({
+                    "area_name": area.name,
+                    "average_rating": round(area.average_rating, 2) if area.average_rating else 0.0,
+                    "average_house_price": live_avg_price,
+                    "total_listed_properties": area.total_houses
+                })
+
+            #then sort alphabatelically and respond
+            data = sorted(data, key=lambda x: x['area_name'])
+
+            return JsonResponse({
+                "total_areas_found": areas.count(),
+                "areas": data
+            }, status=200)
+        
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    else:
+        return JsonResponse({"error": "Need to GET"}, status=405)
+            
+        
+#want to be able to buy houses that are for sale
+@csrf_exempt
+def house_buy(request):
+    #allow viewing of houses for sale
+    if request.method == 'GET':
+        try:
+            houses = Housing.objects.filter(for_sale=True)
+            data = [{
+                "address": h.address,
+                "price": float(h.price),
+                "area": h.area.name,
+                "bedrooms": h.bedrooms
+            } for h in houses]
+
+            return JsonResponse({"houses_for_sale": data, "total": houses.count()}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    #allow house buying
+    elif request.method == 'POST':
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Need to be logged in to buy"}, status=401)
+        
+        try: 
+            #get the address
+            body = json.loads(request.body)
+            address = body.get('address')
+
+            if not address:
+                return JsonResponse({"error": "Provide the address to buy"}, status=400)
+            
+            #hose needs to exist and be for sale
+            house = Housing.objects.get(address=address)
+            if not house.for_sale:
+                return JsonResponse({"error": f"{address} is not currently on the market"}, status=400)
+            
+            #transfer - delete portfolio record and add new one
+            Portfolio.objects.filter(housing=house).delete()
+            Portfolio.objects.create(user=request.user, housing=house, status='LIVING')
+
+            #take off the market
+            house.for_sale = False
+            house.save()
+
+            return JsonResponse({
+                "message": f"You have bought {address}",
+                "price_paid": float(house.price)
+            }, status=200)
+
+        except Housing.DoesNotExist:
+            return JsonResponse({"error": "House not found."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    else:
+        return JsonResponse({"error": "Need to use POST or GET"}, status=405)
+            
+#allow renting of houses
+@csrf_exempt
+def house_rent(request):
+    #get to find houses to rent
+    if request.method == 'GET':
+        try:
+            #fetch all houses flagged for_rent
+            rentable_portfolios = Portfolio.objects.filter(
+                housing__for_rent=True
+            ).select_related('housing', 'housing__area')
+
+            data = [{
+                "address": p.housing.address,
+                "area": p.housing.area.name,
+                "rent": float(p.rent_pcm) if p.rent_pcm else 0.0,
+                "bedrooms": p.housing.bedrooms
+            } for p in rentable_portfolios]
+
+            return JsonResponse({"houses_for_rent": data, "total": rentable_portfolios.count()})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    #post to rent houses
+    elif request.method == 'POST':
+        #need to be logged in 
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Need to be logged in to buy"}, status=401)
+        
+        try:
+            body = json.loads(request.body)
+            address = body.get('address')
+            agreed_rent = body.get('rent_pcm')
+
+            if not address or not agreed_rent:
+                return JsonResponse({"error": "Requires address and rent"}, status=400)
+                
+            #ensure house is for rent
+            house = Housing.objects.get(address=address)
+            if not house.for_rent:
+                return JsonResponse({"error": f"{address} not currently for rent"}, status=400)
+            
+            #get the portfolio + create rent entry
+            portfolio_entry = Portfolio.objects.get(housing=house)
+
+            Rent.objects.create(
+                housing=portfolio_entry,
+                tenant=request.user,
+                actual_rent_pcm=agreed_rent,
+                active=True
+            )
+
+            #update portfolio
+            portfolio_entry.status = 'ACTIVE_TENANT'
+            portfolio_entry.save()
+
+            #teake off the market and return
+            house.for_rent = False
+            house.save()
+
+            return JsonResponse({
+                "message": f'Tenancy for {address}',
+                "monthly_rent": float(agreed_rent)
+            }, status=200)
+
+        except Housing.DoesNotExist:
+            return JsonResponse({"error": "House not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    #allow to update rent amount
+    elif request.method == 'PUT':
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Requires login to update rent"}, status=401)
+        
+        try:
+            body = json.loads(request.body)
+            address = body.get('address')
+            new_rent = body.get('new_rent_pcm')
+
+            if not address or not new_rent:
+                return JsonResponse({"error": "Requires address and new_rent_pcm"}, status=400)
+            
+            house = Housing.objects.get(address=address)
+            portfolio_item = Portfolio.objects.get(housing=house)
+
+            #either the tenant or the landlord can update rent
+            if portfolio_item.user == request.user:
+                rent_item = Rent.objects.get(housing=portfolio_item)
+            else:
+                rent_item = Rent.objects.get(housing=portfolio_item, tenant=request.user)
+
+            rent_item.actual_rent_pcm = new_rent
+            rent_item.save()
+
+            return JsonResponse({"message": "Rent updated successfully", "new_rent": float(new_rent)}, status=200)
+
+        except (Housing.DoesNotExist, Portfolio.DoesNotExist, Rent.DoesNotExist):
+            return JsonResponse({"error": "Property or tenancy not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+        
+    elif request.method == 'DELETE':
+        try:
+            body = json.loads(request.body)
+            address = body.get('address', '').strip()
+
+            #if the address doesnt exist return error
+            if not address:
+                return JsonResponse({"error": "Need to enter 'address' to delete"}, status=400)
+            
+            #get the house and check the user rents it
+            try:
+                house = Housing.objects.get(address=address)
+            except Housing.DoesNotExist:
+                return JsonResponse({"error": "House not found"}, status=404)
+            #using status 403 for forbidden (does not rent)
+            try:
+                portfolio_item = Portfolio.objects.get(housing=house)
+                rent_item = Rent.objects.get(housing=portfolio_item, tenant=request.user)
+            except (Portfolio.DoesNotExist, Rent.DoesNotExist):
+                return JsonResponse({"error": "Forbidden: do not rent property"}, status=403)
+            
+            #then delete - will cascade to delete portfolio
+            rent_item.delete()
+
+            #reset portfolio status
+            portfolio_item.status = 'RENTING'
+            portfolio_item.save()
+            
+            #put house back on market
+            house.for_rent = True
+            house.save()
+
+            return JsonResponse({
+                "message": f"Tenancy ended successfully. {address} is back on the market."
+            }, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Need to use DELETE, PUT, POST or GET"}, status=405)
             
