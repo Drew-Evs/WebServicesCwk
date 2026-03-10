@@ -18,8 +18,7 @@ Describes the 5 endpoints:
 2. Ratings
 3. Housing & Marketplace
 4. Portfolio
-5. Area
-And the GET, POST, PUT & DELETE methods for each one.
-Includes example requests, returns and expected response code.
-Also includes potential error codes.
+5. Area <br>
+And the GET, POST, PUT & DELETE methods for each one. <br>
+Includes example requests, returns, expected response codes and potential error codes. <br>
 [API DOCS](<API Documentation.pdf>)
