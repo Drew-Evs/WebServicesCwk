@@ -502,7 +502,7 @@ def user_portfolio(request):
 
                 #create new house
                 house = Housing.objects.create(
-                    area=area_obj,
+                    area=area_obj.area_id,
                     address=address,
                     property_type=body.get('property_type', 'Unknown'),
                     price=body.get('price', 0),
