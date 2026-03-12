@@ -502,7 +502,7 @@ def user_portfolio(request):
 
                 #create new house
                 house = Housing.objects.create(
-                    area=area_obj.area_id,
+                    area=area_obj,
                     address=address,
                     property_type=body.get('property_type', 'Unknown'),
                     price=body.get('price', 0),
@@ -513,9 +513,9 @@ def user_portfolio(request):
                 )
 
                 #recalculate average price
-                area_avg = Housing.objects.filter(area=area).aggregate(Avg('price'))['price__avg']
-                area.average_price = round(area_avg, 2) if area_avg else 0.0
-                area.save()
+                area_avg = Housing.objects.filter(area=area_obj).aggregate(Avg('price'))['price__avg']
+                area_obj.average_price = round(area_avg, 2) if area_avg else 0.0
+                area_obj.save()
 
             elif create_filter == 'False':
                 #test if house exists - error 404 if not
