@@ -603,8 +603,8 @@ def user_portfolio(request):
 
             #recalculate average price
             area_avg = Housing.objects.filter(area=house.area).aggregate(Avg('price'))['price__avg']
-            area.average_price = round(area_avg, 2) if area_avg else 0.0
-            area.save()
+            house.area.average_price = round(area_avg, 2) if area_avg else 0.0
+            house.area.save()
 
             return JsonResponse({"message": "Property updated successfully"}, status=200)
 
