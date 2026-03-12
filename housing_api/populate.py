@@ -119,8 +119,7 @@ def populate_database():
             )
             
             # 2. Update the Landlord's portfolio to show they now have an active tenant
-            # (Using your exact spelling from models.py to prevent crashes!)
-            portfolio.status = 'ACIVE_TENANT'
+            portfolio.status = 'ACTIVE_TENANT'
             portfolio.save()
             
             # 3. Take the physical house off the rental market
