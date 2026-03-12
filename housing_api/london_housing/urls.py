@@ -11,7 +11,7 @@ urlpatterns = [
     path('user/logout/', views.logout_user, name="logout"),
     path('rate/', views.rate_house, name="rate_house"),
     #and also edit user account
-    path('user/areas/', views.user_account, name="user_account"),
+    path('user/update/', views.user_account, name="user_account"),
 
     #portfolio endpoint
     path('portfolio/', views.user_portfolio, name='user_portfolio'),
