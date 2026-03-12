@@ -124,11 +124,11 @@ def housing_list(request):
                     "error": "Both 'address' and 'area_name' are required fields and cannot be empty."
                 }, status=400)
             
-            area_obj, created = Area.objects.get_or_create(name=area_name)
+            area, created = Area.objects.get_or_create(name=area_name)
 
             #create new house record
             new_house = Housing.objects.create(
-                area=area_obj,
+                area=area,
                 address=address,
                 property_type=body.get('property_type'),
                 price=body.get('price'),
@@ -138,6 +138,11 @@ def housing_list(request):
                 for_sale=body.get('for_sale', False),
                 for_rent=body.get('for_rent', False)
             )
+
+            #recalculate average price
+            area_avg = Housing.objects.filter(area=area).aggregate(Avg('price'))['price__avg']
+            area.average_price = round(area_avg, 2) if area_avg else 0.0
+            area.save()
 
             return JsonResponse({"message": "House Created", "id":new_house.housing_id}, status=201)
         
@@ -154,6 +159,7 @@ def housing_list(request):
 
 #register route
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def register_user(request):
     if request.method == 'POST':
         #get the account details entered and push to database
@@ -182,6 +188,7 @@ def register_user(request):
         
 #also need a route to update/delete user accounts
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def user_account(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Log in first to edit account"}, status=401)
@@ -239,6 +246,7 @@ def user_account(request):
         
 #login route
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def login_user(request):
     if request.method == 'POST':
         try:
@@ -268,6 +276,7 @@ def login_user(request):
     
 #logout route
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def logout_user(request):
     if request.method == 'POST':
         try:
@@ -291,6 +300,7 @@ def logout_user(request):
         
     
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def rate_house(request):
     #get method to view ratings on a house/area and sort them
     if request.method == 'GET':
@@ -442,6 +452,7 @@ def rate_house(request):
 
 #method to allow user portfolio
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def user_portfolio(request):
     #need to be logged in to view/add to porfolio - if not error 401
     if not request.user.is_authenticated:
@@ -500,6 +511,11 @@ def user_portfolio(request):
                     for_sale=body.get('for_sale', False),
                     for_rent=body.get('for_rent', False)
                 )
+
+                #recalculate average price
+                area_avg = Housing.objects.filter(area=area).aggregate(Avg('price'))['price__avg']
+                area.average_price = round(area_avg, 2) if area_avg else 0.0
+                area.save()
 
             elif create_filter == 'False':
                 #test if house exists - error 404 if not
@@ -585,6 +601,11 @@ def user_portfolio(request):
             portfolio_entry.rent_pcm = body.get('rent_pcm', portfolio_entry.rent_pcm)
             portfolio_entry.save()
 
+            #recalculate average price
+            area_avg = Housing.objects.filter(area=house.area).aggregate(Avg('price'))['price__avg']
+            area.average_price = round(area_avg, 2) if area_avg else 0.0
+            area.save()
+
             return JsonResponse({"message": "Property updated successfully"}, status=200)
 
         except Exception as e:
@@ -626,14 +647,11 @@ def user_portfolio(request):
 
 #want to be able to search by area and filter by price/rating
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def area_list(request):
     if request.method == 'GET':
         try:
-            #usoing annotate to get average price 
-            areas = Area.objects.annotate(
-                calculated_avg_price = Avg('properties__price'),
-                total_houses = Count('properties')
-            )
+            areas = Area.objects.all()
 
             #URL filters
             min_rating = request.GET.get('min_rating')
@@ -651,16 +669,12 @@ def area_list(request):
             #map to dictionary - fall back to 0 if no rating/prices
             data = []
             for area in areas:
-                #calculate live average price and add to db 
-                live_avg_price = round(area.calculated_avg_price, 2) if area.calculated_avg_price else 0.0
-                area.average_price = live_avg_price
-                area.save()
-
+                houses = Housing.objects.filter(area=area)
                 data.append({
                     "area_name": area.name,
                     "average_rating": round(area.average_rating, 2) if area.average_rating else 0.0,
-                    "average_house_price": live_avg_price,
-                    "total_listed_properties": area.total_houses
+                    "average_house_price": round(area.average_price, 2) if area.average_price else 0.0,
+                    "total_listed_properties": houses.count()
                 })
 
             #then sort alphabatelically and respond
@@ -680,6 +694,7 @@ def area_list(request):
         
 #want to be able to buy houses that are for sale
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def house_buy(request):
     #allow viewing of houses for sale
     if request.method == 'GET':
@@ -737,6 +752,7 @@ def house_buy(request):
             
 #allow renting of houses
 @csrf_exempt
+@rate_limit(max_requests=30, window=60)
 def house_rent(request):
     #get to find houses to rent
     if request.method == 'GET':

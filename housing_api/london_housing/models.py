@@ -67,7 +67,7 @@ class Portfolio(models.Model):
         ('LIVING', 'Living at this address'),
         ('SELLING', 'Trying to sell'),
         ('RENTING', 'Trying to rent out'),
-        ('ACIVE_TENANT', 'Currently renting out')
+        ('ACTIVE_TENANT', 'Currently renting out')
     ]
 
     #link a user to a house
