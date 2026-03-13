@@ -30,6 +30,7 @@ Describes the 5 endpoints:
 
 And the GET, POST, PUT & DELETE methods for each one. <br>
 Includes example requests, returns, expected response codes and potential error codes. <br>
+
 [API Documentation](<API Documentation.pdf>)
 
 ## Technical Report
@@ -40,3 +41,4 @@ Has the following sections:
 4. Generative AI Declaration
 
 [Technical Report](<Technical Report.pdf>)
+
