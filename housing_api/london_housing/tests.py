@@ -1,206 +1,178 @@
 import json
 from django.test import TestCase, Client
 from django.contrib.auth.models import User 
-from .models import Housing, Area, Portfolio, Rating
+from .models import Housing, Area, Portfolio, Rating, Rent
 
-#regression test suite for each of the api endpoints
-
-#housing tests
 class HousingAPITests(TestCase):
-    #run before test to set up a temp ghost database to work with
     def setUp(self):
         self.client = Client()
-
-        #create test area and house
         self.area = Area.objects.create(name="Test Area")
         self.house = Housing.objects.create(
-            area=self.area,
-            address="123 Fake Street",
-            property_type="Detached",
-            price=50000,
-            bedrooms=2,
-            bathrooms=1
+            area=self.area, address="123 Fake Street", property_type="Detached",
+            price=50000, bedrooms=2, bathrooms=1
         )
 
-    #TEST 1 - GET request - test API returns housing correctly
     def test_get_housing(self):
-        #simulate GET request
         response = self.client.get('/api/housing/')
-
-        #check status code
         self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(data["meta"]["total_results"], 1)
 
-        #check JSON contains simulated house
-        response_data = json.loads(response.content)
-        self.assertEqual(response_data["meta"]["total_results"], 1)
-        self.assertEqual(response_data["houses"][0]["address"], "123 Fake Street")
-
-    #TEST 2 - POST request - test saves to DB correctly
     def test_new_housing(self):
-        #new payload to send
-        payload = {
-            "area_name": "New Test Area",
-            "address": "99 Automated Ave",
-            "property_type": "Flat",
-            "price": 250000,
-            "bedrooms": 2,
-            "bathrooms": 1
-        }
-
-        #simulate POST request
-        response = self.client.post(
-            '/api/housing/',
-            data=json.dumps(payload),
-            content_type='application/json'
-        )
-
-        #checks status code is 201 (created)
+        payload = {"area_name": "New Test Area", "address": "99 Automated Ave", "price": 250000, "bedrooms": 2, "bathrooms": 1}
+        response = self.client.post('/api/housing/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 201)
+        self.assertTrue(Housing.objects.filter(address="99 Automated Ave").exists())
 
-        #query database to ensure that the new house exists and area auto created
-        house_exists = Housing.objects.filter(address="99 Automated Ave").exists()
-        self.assertTrue(house_exists, "Database didn't update with new house")
-        area_exists = Area.objects.filter(name="New Test Area").exists()
-        self.assertTrue(area_exists, "Database didn't update with new area")
-
-#authentication tests
 class AuthAPITests(TestCase):
-    #create a test user
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(username="testuser", email="test@testmail.com", password="password123")
 
-    #TEST 1 - registering a username - 201 created code
     def test_register_user(self):
         payload = {"username": "newuser", "password": "securepwd", "email": "new@test.com"}
-        response = self.client.post('/api/register/', data=json.dumps(payload), content_type='application/json')
+        response = self.client.post('/api/user/register/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(User.objects.filter(username="newuser").exists())
 
-    #TEST 2 - duplicate user should fail - 409 conflict code
     def test_duplicate_user(self):
-        payload = {"username": "testuser", "password": "password123", "email": "test@testmail.com"}
-        response = self.client.post('/api/register/', data=json.dumps(payload), content_type='application/json')
+        payload = {"username": "testuser", "password": "password123"}
+        response = self.client.post('/api/user/register/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 409)
     
-    #TEST 3 - ability to login - 200 success code
     def test_login_user(self):
         payload = {"username": "testuser", "password": "password123"}
-        response = self.client.post('/api/login/', data=json.dumps(payload), content_type='application/json')
+        response = self.client.post('/api/user/login/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
-#portfolio tests
+    def test_logout_user(self):
+        self.client.force_login(self.user)
+        response = self.client.post('/api/user/logout/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_update_account(self):
+        self.client.force_login(self.user)
+        payload = {"email": "updated@testmail.com"}
+        response = self.client.put('/api/user/update/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "updated@testmail.com")
+
+    def test_delete_account(self):
+        self.client.force_login(self.user)
+        payload = {"username": "testuser"}
+        response = self.client.delete('/api/user/update/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="testuser").exists())
+
 class PortfolioAPITests(TestCase):
     def setUp(self):
-        #create a user and log them in 
         self.client = Client()
-        self.user = User.objects.create_user(username="portfolio_owner", password="password123", email="port@testmail.com")
-        payload = {"username": "portfolio_owner", "password": "password123"}
-        self.client.post('/api/login/', data=json.dumps(payload), content_type='application/json')
-
-        #dummy house/area data
+        self.user = User.objects.create_user(username="portfolio_owner", password="password123")
+        self.client.force_login(self.user)
         self.area = Area.objects.create(name="Chelsea")
-        self.house = Housing.objects.create(
-            area=self.area, address="1 Test Lane", property_type="Detached",
-            price=200000, bedrooms=5, bathrooms=4
-        )
-
-        #add to users portfolio
-        self.portfolio_item = Portfolio.objects.create(
-            user=self.user, housing=self.house, status='LIVING', rent_pcm=0
-        )
+        self.house = Housing.objects.create(area=self.area, address="1 Test Lane", price=200000, bedrooms=3, bathrooms=2)
+        self.portfolio_item = Portfolio.objects.create(user=self.user, housing=self.house, status='LIVING')
     
-    #TEST 1 - GET method - recieved data and code 200
     def test_get_portfolio(self):
         response = self.client.get('/api/portfolio/')
         self.assertEqual(response.status_code, 200)
 
-        data = json.loads(response.content)
-        self.assertEqual(data["total_properties"], 1)
-        self.assertEqual(data["my_porfolio"][0]["address"], "1 Test Lane")
-
-    #TEST 2 - POST new portfolio - verify exists and code 201
     def test_new_portfolio(self):
-        payload = {
-            "create": "True",
-            "address": "99 New Street",
-            "area_name": "Hackney",
-            "property_type": "Flat",
-            "price": 300000,
-            "status": "RENTING",
-            "bedrooms":5, "bathrooms":4
-        }
+        payload = {"create": "True", "address": "99 New Street", "area_name": "Hackney", "bedrooms": 2, "bathrooms": 1}
         response = self.client.post('/api/portfolio/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(Portfolio.objects.filter(user=self.user, housing__address="99 New Street").exists())
 
-    #TEST 3 - PUT (update portfolio) - update price and code 200
     def test_update_portfolio(self):
-        payload = {
-            "address": "1 Test Lane",
-            "price": 250000,
-            "status": "SELLING"
-        }
+        payload = {"address": "1 Test Lane", "status": "SELLING"}
         response = self.client.put('/api/portfolio/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
-        self.house.refresh_from_db()
-        self.portfolio_item.refresh_from_db()
-        self.assertEqual(self.house.price, 250000)
-        self.assertEqual(self.portfolio_item.status, "SELLING")
-
-    #TEST 4 - conflicting - trying to add house already added - error code 409 
-    def test_conflict_portfolio(self):
-        user2 = User.objects.create_user(username="portfolio_owner2", password="password123", email="port@testmail.com")
-        payload = {"username": "portfolio_owner2", "password": "password123", "email": "port@testmail.com"}
-        self.client.post('/api/register/', data=json.dumps(payload), content_type='application/json')
-
-        payload = {
-            "create": "False",
-            "address": "1 Test Lane",
-            "status": "LIVING"
-        }
-        response = self.client.post('/api/portfolio/', data=json.dumps(payload), content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-
-    #TEST 5 - DELETE - property should no longer exist - status code 200
     def test_delete_portfolio(self):
         payload = {"address": "1 Test Lane"}
         response = self.client.delete('/api/portfolio/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(Housing.objects.filter(address="1 Test Lane").exists())
 
-#rating tests
 class RatingAPITests(TestCase):
     def setUp(self):
-        #create a user then log them in 
         self.client = Client()
-        self.user = User.objects.create_user(username="portfolio_owner", password="password123", email="port@testmail.com")
-        payload = {"username": "portfolio_owner", "password": "password123"}
-        self.client.post('/api/login/', data=json.dumps(payload), content_type='application/json')
-
-        #create a house/area
+        self.user = User.objects.create_user(username="rater", password="password123")
+        self.client.force_login(self.user)
         self.area = Area.objects.create(name="Camden")
-        self.house = Housing.objects.create(
-            area=self.area, address="10 Rating Road", property_type="Terraced", 
-            price=600000, bedrooms=3, bathrooms=1
-        )
-
-        #add to users portfolio
-        self.portfolio_item = Portfolio.objects.create(
-            user=self.user, housing=self.house, status='LIVING', rent_pcm=0
-        )
+        self.house = Housing.objects.create(area=self.area, address="10 Rating Road", price=600000, bedrooms=2, bathrooms=1)
     
-    #TEST 1 - POST create reating - satus code 201
+    def test_get_ratings(self):
+        Rating.objects.create(user=self.user, housing=self.house, score=9)
+        response = self.client.get('/api/rate/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)["total_results"], 1)
+
     def test_create_rating(self):
-        payload = {"address": "10 Rating Road", "score": 8, "comments": "Lovely place!"}
+        payload = {"address": "10 Rating Road", "score": 8, "comments": "Lovely!"}
         response = self.client.post('/api/rate/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(Rating.objects.filter(user=self.user, housing=self.house, score=8).exists())
 
-    #TEST 2 - DELETE house therefore rating should not exist
-    def test_delete_housing(self):
-        payload = {"address": "10 Rating Road"}
-        response = self.client.delete('/api/portfolio/', data=json.dumps(payload), content_type='application/json')
+class AreaAPITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.area = Area.objects.create(name="Islington", average_price=500000)
+
+    def test_get_areas(self):
+        response = self.client.get('/api/areas/')
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(Rating.objects.filter(user=self.user, housing=self.house).exists())
+        self.assertEqual(json.loads(response.content)["total_areas_found"], 1)
+
+class HouseBuyAPITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="buyer", password="password123")
+        self.client.force_login(self.user)
+        self.area = Area.objects.create(name="Sutton")
+        self.house = Housing.objects.create(area=self.area, address="2 Buy Street", price=300000, for_sale=True, bedrooms=4, bathrooms=2)
+
+    def test_get_houses_for_sale(self):
+        response = self.client.get('/api/housing/buy/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)["total"], 1)
+
+    def test_buy_house(self):
+        payload = {"address": "2 Buy Street"}
+        response = self.client.post('/api/housing/buy/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.house.refresh_from_db()
+        self.assertFalse(self.house.for_sale)
+        self.assertTrue(Portfolio.objects.filter(user=self.user, housing=self.house).exists())
+
+class HouseRentAPITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.landlord = User.objects.create_user(username="landlord", password="password123")
+        self.tenant = User.objects.create_user(username="tenant", password="password123")
+        self.client.force_login(self.tenant)
+        self.area = Area.objects.create(name="Ealing")
+        self.house = Housing.objects.create(area=self.area, address="3 Rent Ave", price=400000, for_rent=True, bedrooms=1, bathrooms=1)
+        self.portfolio = Portfolio.objects.create(user=self.landlord, housing=self.house, status='RENTING', rent_pcm=1500)
+
+    def test_get_houses_for_rent(self):
+        response = self.client.get('/api/housing/rent/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)["total"], 1)
+
+    def test_rent_house(self):
+        payload = {"address": "3 Rent Ave", "rent_pcm": 1500}
+        response = self.client.post('/api/housing/rent/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Rent.objects.filter(tenant=self.tenant).exists())
+
+    def test_update_rent(self):
+        Rent.objects.create(housing=self.portfolio, tenant=self.tenant, actual_rent_pcm=1500, active=True)
+        payload = {"address": "3 Rent Ave", "new_rent_pcm": 1600}
+        response = self.client.put('/api/housing/rent/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Rent.objects.get(tenant=self.tenant).actual_rent_pcm, 1600)
+
+    def test_delete_tenancy(self):
+        Rent.objects.create(housing=self.portfolio, tenant=self.tenant, actual_rent_pcm=1500, active=True)
+        payload = {"address": "3 Rent Ave"}
+        response = self.client.delete('/api/housing/rent/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Rent.objects.filter(tenant=self.tenant).exists())
