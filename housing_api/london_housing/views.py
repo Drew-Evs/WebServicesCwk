@@ -40,7 +40,7 @@ def rate_limit(max_requests=60, window=60):
 def housing_list(request):
     #if GET need to read all of the housing listing
     if request.method == 'GET':
-        houses = Housing.objects.all()
+        houses = Housing.objects.all().order_by('housing_id')
 
         #potential filters for the housing
         area_filter = request.GET.get('area')
@@ -130,9 +130,9 @@ def housing_list(request):
             new_house = Housing.objects.create(
                 area=area,
                 address=address,
-                property_type=body.get('property_type'),
-                price=body.get('price'),
-                area_sqft=body.get('area_sqft'),
+                property_type=body.get('property_type', "House"),
+                price=body.get('price', 0),
+                area_sqft=body.get('area_sqft', 0),
                 bedrooms=body.get('bedrooms', 0),
                 bathrooms=body.get('bathrooms', 0),
                 for_sale=body.get('for_sale', False),
